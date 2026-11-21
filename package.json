@@ -1,0 +1,15 @@
+{
+  "name": "herbario-md",
+  "version": "0.3.0",
+  "description": "Herbario MD: Ruta Segura Bogotá, zona Minuto de Dios. Juego web 3D del Taller de Videojuegos.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "zona": "node scripts/build-zone.mjs",
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.187.0"
+  }
+}
