@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Ruta Segura Bogotá · Minuto de Dios</title>
+<style>
+  :root { --ink: #16232c; --soft: #50606b; --green: #1f8a4c; --gold: #c98a00; --card: rgba(255,255,255,0.94); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #cfe3ef; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); -webkit-user-select: none; user-select: none; touch-action: none; }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .panel { background: var(--card); border-radius: 16px; box-shadow: 0 6px 24px rgba(20,40,60,0.18); }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 12px; }
+  .btn { background: var(--green); color: #fff; font-weight: 700; padding: 12px 22px; font-size: 17px; }
+  .btn.ghost { background: rgba(255,255,255,0.9); color: var(--ink); font-weight: 600; font-size: 14px; padding: 8px 12px; }
+
+  /* HUD */
+  #hud { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+  .chip { padding: 8px 12px; font-size: 14px; line-height: 1.2; }
+  .chip b { font-size: 20px; }
+  .chip small { display: block; color: var(--soft); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  #tools { position: fixed; top: max(12px, env(safe-area-inset-top)); right: 12px; display: flex; gap: 8px; }
+  #minimap { position: fixed; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); border-radius: 12px; border: 3px solid #fff; box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+  body.touch #minimap { top: 64px; bottom: auto; }
+
+  #hint { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); max-width: min(92vw, 560px); padding: 10px 16px; font-size: 16px; text-align: center; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #hint.on { opacity: 1; }
+  #toast { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); padding: 12px 18px; font-weight: 700; font-size: 18px; background: #16232c; color: #fff; border-radius: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  #toast.on { opacity: .92; }
+
+  #progress { position: fixed; left: 50%; bottom: 22%; width: 74px; height: 74px; margin-left: -37px; border-radius: 50%; opacity: 0; pointer-events: none;
+    background: conic-gradient(var(--green) calc(var(--p, 0) * 1%), rgba(255,255,255,0.6) 0); display: grid; place-items: center; }
+  #progress::after { content: "Registrando"; font-size: 10px; font-weight: 700; background: #fff; border-radius: 50%; width: 58px; height: 58px; display: grid; place-items: center; }
+  #progress.on { opacity: 1; }
+
+  /* Diálogo y fichas */
+  #dialog { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(94vw, 620px); padding: 16px 18px; display: none; }
+  #dialog.on { display: block; }
+  #dialog-name { font-weight: 800; color: #d55f00; font-size: 14px; text-transform: uppercase; letter-spacing: .04em; }
+  #dialog-text { font-size: 18px; margin: 6px 0 10px; line-height: 1.35; }
+  #dialog-next { float: right; }
+  .modal { position: fixed; inset: 0; display: none; place-items: center; background: rgba(15,30,40,0.35); padding: 16px; }
+  .modal.on { display: grid; }
+  .card { width: min(94vw, 460px); padding: 22px; max-height: 90vh; overflow: auto; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; text-transform: uppercase; letter-spacing: .04em; }
+  .tag.nativa { background: #dff3e6; color: #17703c; } .tag.rara { background: #fcefc7; color: #8a5d00; }
+  .tag.intro { background: #e9edf0; color: #50606b; } .tag.riesgo { background: #fde2dc; color: #a8321b; }
+  #ficha-name { font-size: 28px; margin: 10px 0 0; }
+  #ficha-sci { font-style: italic; color: var(--soft); margin: 2px 0 12px; }
+  #ficha-text { font-size: 17px; line-height: 1.4; margin: 0 0 10px; }
+  #ficha-data { font-size: 14px; color: var(--soft); margin: 0 0 12px; }
+  #ficha-points { font-weight: 700; color: var(--green); margin: 0 0 16px; }
+  #herbario-list { list-style: none; padding: 0; margin: 10px 0; }
+  #herbario-list li { padding: 7px 0; border-bottom: 1px solid #eef1f3; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  #herbario-faltan { font-size: 14px; color: var(--soft); }
+
+  /* Intro y final */
+  #intro .card, #end .card { width: min(94vw, 560px); }
+  h1 { margin: 0 0 4px; font-size: 30px; line-height: 1.1; }
+  .kicker { color: var(--green); font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+  .lead { font-size: 17px; line-height: 1.45; }
+  .controls { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; margin: 12px 0; }
+  .controls kbd { background: #eef1f3; border-radius: 6px; padding: 2px 7px; font-family: inherit; font-weight: 700; white-space: nowrap; }
+  .credits { font-size: 12px; color: var(--soft); padding-left: 18px; margin: 14px 0 0; }
+  .medal { font-size: 26px; font-weight: 800; margin: 6px 0 10px; }
+  .medal.oro { color: #b8860b; } .medal.plata { color: #6f7b85; } .medal.bronce { color: #9a5b2c; }
+  #end-stats { padding-left: 18px; line-height: 1.7; }
+  body.touch .only-keys { display: none; } body:not(.touch) .only-touch { display: none; }
+
+  /* Controles táctiles */
+  #joy { position: fixed; width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.7); display: none; pointer-events: none; }
+  #joy.on { display: block; }
+  #joy-knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(255,255,255,0.85); }
+  #touch-btns { position: fixed; right: 16px; bottom: max(18px, env(safe-area-inset-bottom)); display: none; gap: 12px; align-items: flex-end; }
+  body.touch #touch-btns { display: flex; }
+  .round { width: 78px; height: 78px; border-radius: 50%; font-weight: 800; font-size: 13px; color: #fff; box-shadow: 0 4px 14px rgba(0,0,0,0.25); touch-action: none; }
+  #btn-jump { background: #3d7bd9; } #btn-act { background: var(--green); width: 92px; height: 92px; font-size: 14px; }
+  #touch-help { position: fixed; left: 16px; bottom: max(18px, env(safe-area-inset-bottom)); font-size: 12px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); display: none; pointer-events: none; }
+  body.touch #touch-help { display: block; }
+  @media (max-width: 640px) {
+    #hud { gap: 5px; max-width: 58vw; }
+    .chip { padding: 5px 8px; font-size: 12px; } .chip b { font-size: 15px; } .chip small { font-size: 9px; }
+    #tools { flex-direction: column; align-items: flex-end; gap: 5px; }
+    .btn.ghost { font-size: 12px; padding: 6px 9px; }
+    body.touch #minimap { top: 128px; }
+    #hud .chip:first-child { display: none; }
+    #hint { top: auto; bottom: 150px; font-size: 14px; max-width: 86vw; }
+    #dialog-text { font-size: 16px; }
+    h1 { font-size: 24px; } .lead { font-size: 15px; } .card { padding: 18px; }
+  }
+  /* Editor de personaje */
+  #editor { position: fixed; inset: 0; display: none; pointer-events: none; }
+  #editor.on { display: block; }
+  body.editing #hud, body.editing #tools, body.editing #minimap, body.editing #hint, body.editing #touch-btns, body.editing #touch-help, body.editing #dialog { display: none !important; }
+  #ed-view { position: absolute; left: 0; top: 0; bottom: 0; right: min(460px, 44vw); pointer-events: auto; cursor: grab; touch-action: none; }
+  #ed-view:active { cursor: grabbing; }
+  .ed-head { position: absolute; left: 24px; top: max(18px, env(safe-area-inset-top)); pointer-events: none; }
+  .ed-head h2 { margin: 2px 0 0; font-size: 30px; line-height: 1.05; }
+  .ed-head p { margin: 4px 0 0; color: var(--soft); font-size: 14px; }
+  .ed-view-btns { position: absolute; left: 0; right: 0; bottom: 18px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 0 12px; }
+  .ed-view-btns .btn.ghost { box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+  #ed-practice.on { background: var(--green); color: #fff; }
+  #ed-panel { position: absolute; right: 0; top: 0; bottom: 0; width: min(460px, 44vw); background: #fff; pointer-events: auto; display: flex; flex-direction: column; box-shadow: -8px 0 30px rgba(20,40,60,0.12); padding-top: env(safe-area-inset-top); }
+  .ed-name { display: block; padding: 16px 18px 8px; font-size: 13px; font-weight: 700; color: var(--soft); }
+  .ed-name input { display: block; width: 100%; margin-top: 6px; font: inherit; font-size: 16px; font-weight: 600; color: var(--ink); padding: 10px 12px; border: 2px solid #e2e7ea; border-radius: 12px; outline: none; }
+  .ed-name input:focus { border-color: var(--green); }
+  #ed-tabs { display: flex; gap: 4px; padding: 6px 14px; overflow-x: auto; border-bottom: 1px solid #eef1f3; flex: none; }
+  .ed-tab { background: none; padding: 10px 12px; font-weight: 700; font-size: 14px; color: var(--soft); border-radius: 10px; white-space: nowrap; min-height: 40px; }
+  .ed-tab.on { background: #e5f4eb; color: var(--green); }
+  #ed-body { flex: 1; overflow-y: auto; padding: 6px 18px 12px; overscroll-behavior: contain; touch-action: pan-y; }
+  .ed-row { padding: 10px 0; border-bottom: 1px solid #f1f3f5; }
+  .ed-row.off { opacity: 0.35; pointer-events: none; }
+  .ed-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--soft); margin-bottom: 8px; }
+  .ed-label span { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--ink); margin-left: 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: #f1f4f6; color: var(--ink); font-size: 14px; font-weight: 600; padding: 9px 12px; border-radius: 99px; min-height: 40px; border: 2px solid transparent; }
+  .chip:hover { background: #e7ecef; }
+  .chip.on { background: #e5f4eb; border-color: var(--green); color: #17703c; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .sw { width: 36px; height: 36px; border-radius: 50%; background: var(--c); border: 3px solid #fff; box-shadow: 0 0 0 1px #d6dde2; }
+  .sw.on { box-shadow: 0 0 0 3px var(--green); }
+  #ed-rol-info { margin: 0 18px 8px; padding: 10px 12px; background: #fff6e8; border-radius: 12px; font-size: 14px; display: none; }
+  .ed-foot { flex: none; padding: 10px 14px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid #eef1f3; }
+  #ed-count { display: block; font-size: 12px; color: var(--soft); margin: 0 4px 8px; }
+  .ed-actions { display: flex; gap: 8px; }
+  .ed-actions .btn.ghost { background: #f1f4f6; }
+  .ed-actions #ed-done { margin-left: auto; }
+  #ed-undo:disabled { opacity: .4; }
+  @media (max-width: 759px) {
+    #ed-view { right: 0; bottom: 56vh; }
+    #ed-panel { left: 0; right: 0; top: auto; width: auto; height: 56vh; border-radius: 18px 18px 0 0; padding-top: 0; }
+    .ed-head h2 { font-size: 22px; } .ed-head p { display: none; } .ed-head { left: 14px; top: 10px; }
+    .ed-view-btns { bottom: 8px; } .ed-view-btns .btn.ghost { font-size: 12px; padding: 7px 10px; }
+    .ed-name { padding: 10px 14px 4px; } .ed-name input { padding: 8px 10px; }
+    #ed-body { padding: 4px 14px 10px; }
+    .ed-actions .btn { padding: 10px 14px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+
+<div id="hud">
+  <div class="panel chip"><small>Jugador</small><b id="hud-name" style="font-size:15px">Tu personaje</b></div>
+  <div class="panel chip"><small>Muestras nativas</small><b id="hud-muestras">0</b> <span id="hud-meta">/ 8</span></div>
+  <div class="panel chip"><small>Raras</small><b id="hud-raras">0 / 4</b></div>
+  <div class="panel chip"><small>Puntaje</small><b id="hud-score">0</b></div>
+  <div class="panel chip"><small>Tiempo</small><b id="hud-time">0:00</b></div>
+</div>
+<div id="tools">
+  <button class="btn ghost" id="btn-avatar">Mi personaje</button>
+  <button class="btn ghost" id="btn-herbario">Herbario <span class="only-keys">(H)</span></button>
+  <button class="btn ghost" id="btn-mute">Sonido: sí</button>
+</div>
+<canvas id="minimap" width="170" height="170"></canvas>
+<div id="hint" class="panel"></div>
+<div id="toast"></div>
+<div id="progress"></div>
+
+<div id="joy"><div id="joy-knob"></div></div>
+<div id="touch-btns">
+  <button class="round" id="btn-jump">Saltar</button>
+  <button class="round" id="btn-act">Registrar</button>
+</div>
+<div id="touch-help">Izquierda: moverse · Derecha: mirar</div>
+
+<div id="dialog" class="panel">
+  <div id="dialog-name"></div>
+  <div id="dialog-text"></div>
+  <button class="btn ghost" id="dialog-next">Siguiente</button>
+  <div style="clear: both"></div>
+</div>
+
+<div id="ficha" class="modal"><div class="panel card">
+  <span id="ficha-tag" class="tag"></span>
+  <h2 id="ficha-name"></h2>
+  <div id="ficha-sci"></div>
+  <p id="ficha-text"></p>
+  <p id="ficha-data"></p>
+  <p id="ficha-points"></p>
+  <button class="btn" id="ficha-close">Seguir explorando</button>
+</div></div>
+
+<div id="herbario" class="modal"><div class="panel card">
+  <div class="kicker">Tu herbario</div>
+  <ul id="herbario-list"></ul>
+  <p id="herbario-faltan"></p>
+  <button class="btn" id="herbario-close">Cerrar</button>
+</div></div>
+
+<div id="intro" class="modal on"><div class="panel card">
+  <div class="kicker">Ruta Segura Bogotá · Zona 0</div>
+  <h1>Minuto de Dios: inventario verde</h1>
+  <p class="lead">La brigada del barrio se prepara para el simulacro. Antes, necesita saber qué árboles hay alrededor de la iglesia, el Museo de Arte Contemporáneo y Uniminuto. Registra muestras de árboles <b>nativos</b> y repórtate en el <b>punto de encuentro</b> de la plaza.</p>
+  <p id="intro-count" style="color: var(--soft); font-size: 14px;"></p>
+  <div class="controls only-keys">
+    <kbd>W A S D</kbd><span>Moverte (Shift para correr)</span>
+    <kbd>Arrastrar</kbd><span>Girar la cámara · rueda para acercar</span>
+    <kbd>E (mantener)</kbd><span>Registrar una muestra · hablar · cerrar fichas</span>
+    <kbd>Espacio</kbd><span>Saltar</span>
+    <kbd>H</kbd><span>Ver tu herbario</span>
+  </div>
+  <div class="controls only-touch">
+    <kbd>Izquierda</kbd><span>Joystick para moverte</span>
+    <kbd>Derecha</kbd><span>Arrastra para mirar</span>
+    <kbd>Registrar</kbd><span>Mantén presionado junto a un árbol</span>
+  </div>
+  <button class="btn" id="btn-start">Crear mi personaje</button>
+  <ul class="credits" id="intro-credits"></ul>
+</div></div>
+
+<div id="end" class="modal"><div class="panel card">
+  <div class="kicker">Te reportaste en el punto de encuentro</div>
+  <h1 id="end-title">¡Inventario completo!</h1>
+  <div id="end-medal" class="medal"></div>
+  <ul id="end-stats"></ul>
+  <p class="lead" style="font-size: 15px;">En un sismo, el punto de encuentro debe estar en un espacio abierto, lejos de fachadas, postes y árboles altos como los urapanes y eucaliptos que registraste.</p>
+  <button class="btn" id="btn-again">Volver a jugar</button>
+  <ul class="credits" id="end-credits"></ul>
+</div></div>
+
+<div id="editor">
+  <div id="ed-view">
+    <div class="ed-head"><div class="kicker">Ruta Segura Bogotá</div><h2>Crea tu personaje</h2><p>Arrastra para girarlo</p></div>
+    <div class="ed-view-btns">
+      <button type="button" class="btn ghost" id="ed-wave">Saludar</button>
+      <button type="button" class="btn ghost" id="ed-practice">Practicar: agacharse y cubrirse</button>
+    </div>
+  </div>
+  <aside id="ed-panel">
+    <label class="ed-name">Tu apodo <input id="ed-name" maxlength="18" placeholder="Ej.: Copetón veloz" autocomplete="off"></label>
+    <nav id="ed-tabs"></nav>
+    <div id="ed-body"></div>
+    <p id="ed-rol-info"></p>
+    <div class="ed-foot">
+      <span id="ed-count"></span>
+      <div class="ed-actions">
+        <button type="button" class="btn ghost" id="ed-undo">Deshacer</button>
+        <button type="button" class="btn ghost" id="ed-random">Aleatorio</button>
+        <button type="button" class="btn" id="ed-done">¡Listo!</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>/*GAME*/</script>
+</body>
+</html>
